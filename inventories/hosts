@@ -1,0 +1,5 @@
+[stream_server]
+#ここにストリーミングサーバのIPとユーザを入力#入力したらこの行は消す
+[file_server]
+#ここにファイルサーバのIPとユーザを入力#入力したらこの行は消す
+ansible_ssh_user=ubuntu

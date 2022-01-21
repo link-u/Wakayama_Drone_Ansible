@@ -1,0 +1,61 @@
+---
+# ubuntu20.04インストールされている想定
+# ファイルサーバのユーザはubuntuである必要がある
+- hosts: file_server
+  become: on
+  vars:
+    conf_file: ./conf/smb.conf
+
+  tasks:
+  - name: install samba
+    apt: name=samba update_chache=yes cache_valid_time=3600
+
+  - name: make share_directory
+    shell: mkdir /home/ubuntu/sambashare
+
+  - name: replace samba_conf
+    copy: src=/etc/samba/smb.conf dest={{ conf_file }} force=yes
+
+  - name: restart samba
+    shell: systemctl restart smbd
+
+  - name: open 445 port
+    shell: ufw allow 445/tcp
+
+  - name: open 139 port
+    shell: ufw allow 139/tcp
+
+  - name: open 138 port
+    shell: ufw allow 138/udp
+
+  - name: open 137 port
+    shell: ufw allow 137/udp
+
+  - name: restart ufw
+    shell: systemctl restart ufw
+
+# ubuntuOSを想定
+# ストリーミングサーバに向けている
+- hosts: stream_server
+  become: on
+  vars:
+    server_ip: 0.0.0.0 #ファイルサーバのIPアドレス
+
+  tasks:
+  - name: install cmake
+    shell: apt-get install -y cmake lib41-dev libjpeg-dev imagemagick
+
+  - name: download mjpeg-streamer
+    shell: git clone https://github.com/jacksonliam/mjpg-streamer.git
+
+  - name: cd
+    shell: cd mjpg-streamer/mjpg-streamer-experimental
+
+  - name: make install
+    shell: make; make install
+
+  - name: mount file
+    shell: mount -t cifs -o file_mode=0777, dir_mode=0777 //{{ server_ip }}/sambashare /mnt/samba
+
+  - name: save settings
+    shell: ffmpeg -i http://127.0.0.1:8080/?action=stream -an -vcodec h264 //{{ server_ip }}/sambashare/file.mp4
